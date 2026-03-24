@@ -1,0 +1,39 @@
+# -------------------- Training Hyperparameters --------------------
+batch_size: 8
+lr: 0.0001
+epochs: 250
+patience: 15
+
+# -------------------- Checkpoints & Output --------------------
+checkpoints: "./checkpoints/vae/"
+
+# -------------------- Dataset & Splits --------------------
+dataset_path: "../data/FULL_UNIFIED"
+train_ratio: 0.8
+val_ratio: 0.2
+resize_img: 256
+augment: False
+augment_ratio: 2
+use_test_split: True
+create_new_split: True
+num_folds: 5
+seed: 42
+
+# -------------------- VAE Loss --------------------
+kl_beta: 0.001   # renamed from beta_kl_loss for clarity
+
+# -------------------- Device / Architecture --------------------
+device: "cuda"
+
+# -------------------- Reproducibility --------------------
+deterministic: True
+cudnn_benchmark: False
+
+# -------------------- DataLoader --------------------
+num_workers: 4
+pin_memory: True
+persistent_workers: True
+
+# -------------------- WandB --------------------
+wandb_project: "dual_vae"
+wandb_entity: "imagine-laboratory-conare"

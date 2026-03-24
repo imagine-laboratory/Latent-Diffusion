@@ -1,0 +1,50 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.conda/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Root-level project folders you want to ignore (adjust as needed)
+*__pycache__*
+datasets/
+results/
+checkpoints/
+wandb/
+output/
+splits/
+inferences/
+.env
+
+*test_ids.txt
+copy_images.py
+compute_metrics.py

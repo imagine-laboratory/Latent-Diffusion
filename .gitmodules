@@ -1,0 +1,3 @@
+[submodule "submodules/VAE"]
+	path = submodules/VAE
+	url = git@github.com:imagine-laboratory/VAE.git
