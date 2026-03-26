@@ -110,12 +110,17 @@ def main():
     # ───────────────────────────────────────────────────────────────────────────
     # 1) LOAD & FREEZE VAE
     device = select_device()
-    if args.model_VAE == "VAE".lower():
-        is_vqvae = False
+    no_need_sigma = False
+    if args.model_VAE.lower() == "vae":
         from submodules.VAE.models.vae import VAE
         vae = VAE().to(device)
+    elif args.model_VAE.lower() == "dualvae":
+        from submodules.VAE.models.dual_vae import DUALVAE
+        vae = DUALVAE(commitment_cost=args.vae_config.commitment_cost,
+                      embedding_dim=args.vae_config.codebook_dim,
+                      num_embeddings=args.vae_config.num_embeddings).to(device)
     else: 
-        is_vqvae = True
+        no_need_sigma = True
         from submodules.VAE.models.vqvae import VQVAE
         vae = VQVAE(num_embeddings=args.vae_config.num_embeddings, embedding_dim=args.vae_config.codebook_dim).to(device)
 
@@ -127,7 +132,7 @@ def main():
     # 2) LOAD (OR COMPUTE) sigma_latent
     sigma_path = os.path.join(args.chkps_logging_path, "sigma_latent.txt")
     sigma_latent = None
-    if is_vqvae:
+    if no_need_sigma:
         # VQ-regularized spaces have a variance close to 1, no rescaling needed
         sigma_latent = torch.tensor(1.0, device=device)
         print("Using VQ-VAE: sigma_latent set to 1.0")
@@ -138,14 +143,16 @@ def main():
         sigma_latent = torch.tensor(sigma_val, device=device)
         print(f"Loaded existing sigma_latent = {sigma_val:.6g} from {sigma_path}")
     else:
-    #####TODO
         #get the first batch of the training set but without next iter, just to compute sigma_latent
         first_batch = next(iter(trainloader))
         imgs0 = first_batch['image'].to(device)
         with torch.no_grad():
             b0, _, h0, w0 = imgs0.shape
             noise0 = torch.randn((b0, 4, h0 // 8, w0 // 8), device=device)
-            latent0, _, _ = vae.encoder(imgs0, noise0)
+            if args.model_VAE.lower() == "dualvae":
+                latent0 = vae.encode_for_diffusion(imgs0, noise0)
+            else:
+                latent0, _, _ = vae.encoder(imgs0, noise0)
 
         mu_latent    = latent0.mean()         # scalar, not used directly
         sigma_latent = latent0.std(unbiased=False)  # scalar tensor
@@ -155,7 +162,7 @@ def main():
         print(f"Computed and saved sigma_latent = {sigma_val:.6g} to {sigma_path}")
 
     # Determine the correct number of channels based on the VAE type
-    latent_channels = args.vae_config.codebook_dim if is_vqvae else 4
+    latent_channels = args.vae_config.codebook_dim if no_need_sigma else 4
     # ───────────────────────────────────────────────────────────────────────────
     # 3) BUILD DIFFUSION MODEL (with or without attention) and set up optimizer/scheduler
     if args.attention:
@@ -230,11 +237,17 @@ def main():
                 # 1. Encode
                 with torch.no_grad():
                     b, _, h, w = imgs.shape
-                    if is_vqvae:
-                        # Extract continuous latent before the quantization layer
+                    if args.model_VAE.lower() == "dualvae":
+                        noise_vae = torch.randn((b, 4, h // 8, w // 8), device=device)
+                        latent = vae.encode_for_diffusion(imgs, noise_vae)
+                        latent = latent / sigma_latent
+                        latent = latent.detach()
+                        
+                    elif no_need_sigma: # VQVAE
                         latent = vae.encoder(imgs)
                         latent = latent.detach()
-                    else:
+                        
+                    else: # Vanilla VAE
                         noise_vae = torch.randn((b, 4, h // 8, w // 8), device=device)
                         latent, mu, logvar = vae.encoder(imgs, noise_vae)
                         latent = latent / sigma_latent
