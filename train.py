@@ -68,12 +68,12 @@ def get_dataloaders(args):
 
     return trainset, valset, trainloader, valloader
 
-def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, seed, sigma_latent, log_to_wandb=True, num_image=None):
+def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, seed, sigma_latent,latent_channels, log_to_wandb=True, num_image=None):
     generator.manual_seed(seed)
     sampler_i = DDPMSampler(generator)
     sampler_i.set_inference_timesteps(1000)
     with torch.no_grad():
-        latents = torch.randn((1, 4, h // 8, w // 8), device=device)
+        latents = torch.randn((1, latent_channels, h // 8, w // 8), device=device)
         for timestep in tqdm(sampler_i.timesteps, desc="Sampling"):
             t = torch.tensor([int(timestep)], dtype=torch.long, device=device)
             time_embedding = get_time_embedding(t).to(device)
@@ -82,7 +82,13 @@ def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, 
         
         latents = latents * sigma_latent
         # Decode & log
-        decoded = vae.decoder(latents)
+        # Decode & log
+        if type(vae).__name__ == "VQVAE":
+            # Absorb the quantization operation into the decoder
+            z_q, _, _, _, _ = vae.vq_layer(latents)
+            decoded = vae.decoder(z_q)
+        else:
+            decoded = vae.decoder(latents)
         img = decoded.squeeze(0).cpu().numpy()
         img = np.transpose(img, (1, 2, 0))
         img = np.clip(img, 0.0, 1.0)
@@ -105,13 +111,14 @@ def main():
     # 1) LOAD & FREEZE VAE
     device = select_device()
     if args.model_VAE == "VAE".lower():
+        is_vqvae = False
         from submodules.VAE.models.vae import VAE
         vae = VAE().to(device)
     else: 
+        is_vqvae = True
         from submodules.VAE.models.vqvae import VQVAE
-        vae = VQVAE().to(device)
+        vae = VQVAE(num_embeddings=args.vae_config.num_embeddings, embedding_dim=args.vae_config.codebook_dim).to(device)
 
-    vae = VAE().to(device)
     ckpt = torch.load(args.vae_chkp, map_location=device)
     vae = load_and_send_to_eval(vae, ckpt)
 
@@ -120,7 +127,11 @@ def main():
     # 2) LOAD (OR COMPUTE) sigma_latent
     sigma_path = os.path.join(args.chkps_logging_path, "sigma_latent.txt")
     sigma_latent = None
-    if os.path.exists(sigma_path):
+    if is_vqvae:
+        # VQ-regularized spaces have a variance close to 1, no rescaling needed
+        sigma_latent = torch.tensor(1.0, device=device)
+        print("Using VQ-VAE: sigma_latent set to 1.0")
+    elif os.path.exists(sigma_path):
         # If sigma_latent was saved previously, just read it:
         with open(sigma_path, "r") as f:
             sigma_val = float(f.read().strip())
@@ -143,14 +154,16 @@ def main():
             f.write(f"{sigma_val:.12g}")
         print(f"Computed and saved sigma_latent = {sigma_val:.6g} to {sigma_path}")
 
+    # Determine the correct number of channels based on the VAE type
+    latent_channels = args.vae_config.codebook_dim if is_vqvae else 4
     # ───────────────────────────────────────────────────────────────────────────
     # 3) BUILD DIFFUSION MODEL (with or without attention) and set up optimizer/scheduler
     if args.attention:
         from models.diffusion import Diffusion as Diffusion_att
-        diffusion_model = Diffusion_att().to(device)
+        diffusion_model = Diffusion_att(in_channels=latent_channels).to(device)
     else:
         from models.diffusion_conv import Diffusion
-        diffusion_model = Diffusion().to(device)
+        diffusion_model = Diffusion(in_channels=latent_channels).to(device)
 
     sampler = DDPMSampler(generator=torch.Generator(device=device),
                           num_training_steps=1000)
@@ -217,10 +230,15 @@ def main():
                 # 1. Encode
                 with torch.no_grad():
                     b, _, h, w = imgs.shape
-                    noise_vae = torch.randn((b, 4, h // 8, w // 8), device=device)
-                    latent, mu, logvar = vae.encoder(imgs, noise_vae)
-                    latent = latent / sigma_latent
-                    latent = latent.detach()
+                    if is_vqvae:
+                        # Extract continuous latent before the quantization layer
+                        latent = vae.encoder(imgs)
+                        latent = latent.detach()
+                    else:
+                        noise_vae = torch.randn((b, 4, h // 8, w // 8), device=device)
+                        latent, mu, logvar = vae.encoder(imgs, noise_vae)
+                        latent = latent / sigma_latent
+                        latent = latent.detach()
 
                 # 2. Sample t & add noise
                 if not args.non_uniform_sampling:
@@ -318,7 +336,7 @@ def main():
                 diffusion_model.eval()
                 sample_i(h, w, vae, diffusion_model,
                          torch.Generator(device=device),
-                         epoch, global_step, device, seed=42, sigma_latent=sigma_latent)
+                         epoch, global_step, device, seed=42, sigma_latent=sigma_latent,latent_channels=latent_channels)
                 diffusion_model.train()
         else:
             epochs_no_improve += 1
@@ -340,7 +358,7 @@ def main():
         diffusion_model.eval()
         sample_i(h, w, vae, diffusion_model,
                  torch.Generator(device=device),
-                 epoch, global_step, device, seed=42, sigma_latent=sigma_latent)
+                 epoch, global_step, device, seed=42, sigma_latent=sigma_latent, latent_channels=latent_channels)
 
     print("Training complete.")
 
