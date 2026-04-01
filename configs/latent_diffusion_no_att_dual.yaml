@@ -1,0 +1,27 @@
+# Training Hyperparameters
+dataset_path: "../data_pineapple/FULL_UNIFIED"
+path_test_ids: "./test_ids.txt"
+batch_size: 8
+num_workers: 4
+lr: 0.0001
+epochs: 150
+rec_importance: 1
+seed: 42
+
+chkps_logging_path: "checkpoints/diffusion/dual_vae_Codebok_64@Commit_0.25@NumEmb_128/" #### This is for DUALVAE
+vae_chkp: "submodules/VAE/checkpoints/DUALVAE/Codebok_64@Commit_0.25@NumEmb_128/weights_ck_100.pt"
+
+# Early Stopping
+patience: -1
+es_min_delta: 0.1
+
+# Flags (Store True)
+do_wandb: True
+non_uniform_sampling: false
+attention: false
+augment: false
+constant_lr: false
+
+# Logging & Tracking
+run_name: "Dual-VAE-DIFF-NOAT-long"
+wandb_run_id: null

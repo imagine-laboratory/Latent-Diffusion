@@ -1,28 +1,28 @@
 # Training Hyperparameters
-dataset_path: "../../Dual-VAE/data/FULL_UNIFIED"
+dataset_path: "../data_pineapple/FULL_UNIFIED"
 path_test_ids: "./test_ids.txt"
-batch_size: 2
+batch_size: 8
 num_workers: 4
 lr: 0.0001
-epochs: 300
+epochs: 150
 rec_importance: 1
 seed: 42
 
 # Model Paths & Checkpoints
-chkps_logging_path: "checkpoints/diffusion/betaKL@0.001/"
+chkps_logging_path: "checkpoints/diffusion/betaKL@0.001/" #### This is for Vanilla VAE
 vae_chkp: "submodules/VAE/checkpoints/VAE/betaKL@0.001/best.pt"
 
 # Early Stopping
-patience: 10
-es_min_delta: 0.001
+patience: -1
+es_min_delta: 0.1
 
 # Flags (Store True)
-do_wandb: false
+do_wandb: True
 non_uniform_sampling: false
 attention: false
 augment: false
 constant_lr: false
 
 # Logging & Tracking
-run_name: null
+run_name: "Vanilla-VAE-DIFF-NOAT-long"
 wandb_run_id: null

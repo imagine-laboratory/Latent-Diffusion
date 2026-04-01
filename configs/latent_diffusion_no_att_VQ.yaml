@@ -1,0 +1,28 @@
+# Training Hyperparameters
+dataset_path: "../data_pineapple/FULL_UNIFIED"
+path_test_ids: "./test_ids.txt"
+batch_size: 8
+num_workers: 4
+lr: 0.0001
+epochs: 800
+rec_importance: 1
+seed: 42
+
+# Model Paths & Checkpoints
+chkps_logging_path: "checkpoints/diffusion/Codebok_64@Fold_test_ids@Commit_0.25@NumEmb_128/" #### This is for VQVAE
+vae_chkp: "submodules/VAE/checkpoints/VQVAE/Codebok_64@Fold_test_ids@Commit_0.25@NumEmb_128/weights_ck_100.pt"
+
+# Early Stopping
+patience: -1
+es_min_delta: 0.1
+
+# Flags (Store True)
+do_wandb: True
+non_uniform_sampling: false
+attention: false
+augment: false
+constant_lr: True
+
+# Logging & Tracking
+run_name: "VQ-VAE-DIFF-NOAT-long"
+wandb_run_id: null
