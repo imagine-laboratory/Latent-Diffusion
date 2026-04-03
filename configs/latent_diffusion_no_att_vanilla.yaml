@@ -4,7 +4,7 @@ path_test_ids: "./test_ids.txt"
 batch_size: 8
 num_workers: 4
 lr: 0.0001
-epochs: 150
+epochs: 800
 rec_importance: 1
 seed: 42
 
@@ -24,5 +24,5 @@ augment: false
 constant_lr: false
 
 # Logging & Tracking
-run_name: "Vanilla-VAE-DIFF-NOAT-long_v2"
+run_name: "Vanilla-VAE-DIFF-NOAT-long_v3"
 wandb_run_id: null
