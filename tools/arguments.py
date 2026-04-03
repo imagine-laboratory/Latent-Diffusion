@@ -56,3 +56,30 @@ def parse_args():
     final_args = parser.parse_args(namespace=final_args)
 
     return final_args
+
+def parse_args_inference():
+    parser = argparse.ArgumentParser(description="Train VAE on Pineapple Dataset")
+    parser.add_argument('--model_VAE', default="VAE", type=str)
+    parser.add_argument('--config_VAE', default="configs/vae.yaml", type=str)
+    parser.add_argument('--vae_chkp', default="submodules/VAE/checkpoints/VAE/betaKL@0.001/best.pt", type=str)
+    parser.add_argument('--save_path', default="inference_results", type=str)
+    parser.add_argument('--diffusion_chkp', default="checkpoints/diffusion/betaKL@0.001/diffusion_final_epoch800_loss0.0788_1.pt", type=str)
+    parser.add_argument('--sigma_latent', type=str)
+    #boolean for attention default false
+    parser.add_argument('--attention', action='store_true')
+    parser.add_argument('--steps', default=1000, type=int)
+    parser.add_argument('--num_images', default=1000, type=int)
+    parser.add_argument('--seed', default=42, type=int)
+    
+    # 1. Parse the initial paths
+    args, unknown = parser.parse_known_args()
+
+    # 3. Load VAE Config as a nested object
+    # We use SimpleNamespace so you can do args.vae_config.batch_size
+    args.vae_config = load_yaml_as_namespace(args.config_VAE)
+
+    # 4. (Optional) Re-parse to allow CLI to override main config
+    # Note: This usually only overrides top-level keys in final_args
+    args = parser.parse_args(namespace=args)
+
+    return args
