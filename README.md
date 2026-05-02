@@ -57,5 +57,24 @@ pip install wandb[media]
 ```
 ## Steps to clone this repo:
 
-1. Clone it in an empty directory with the following command:
-git clone --recurse-submodules <your-repo-URL>
+git clone --recurse-submodules [https://github.com/imagine-laboratory/Latent-Diffusion.git](https://github.com/imagine-laboratory/Latent-Diffusion.git)
+cd Latent-Diffusion
+
+## 🚀 Training the Latent Diffusion Models
+
+### 1. Training with Continuous Latent Space (β-VAE)
+To train the diffusion model using the continuous β-VAE latent representations, run the following command:
+```bash
+python train.py \
+  --config configs/latent_diffusion_no_att_vanilla.yaml \
+  --model_VAE vae \
+  --config_VAE configs/vae.yaml
+```
+### 2. Training with Discrete Latent Space (VQ-VAE)
+To train the diffusion model using the discrete VQ-VAE latent representations, run the following command:
+```bash
+python train.py \
+  --config configs/latent_diffusion_no_att_VQ.yaml \
+  --model_VAE VQVAE \
+  --config_VAE configs/vqvae.yaml
+```
