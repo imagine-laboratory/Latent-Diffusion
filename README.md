@@ -58,6 +58,7 @@ pip install wandb[media]
 ## Steps to clone this repo:
 
 git clone --recurse-submodules [https://github.com/imagine-laboratory/Latent-Diffusion.git](https://github.com/imagine-laboratory/Latent-Diffusion.git)
+
 cd Latent-Diffusion
 
 ## 🚀 Training the Latent Diffusion Models
