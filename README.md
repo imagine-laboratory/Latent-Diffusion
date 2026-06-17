@@ -9,7 +9,7 @@
 </style> -->
 
 <h1 align="center">
-  <span style="color: teal; font-family: Consolas;">Learning Compact Representations of Agricultural Fields</span>: A Study of Variational Autoencoders Variants for Aerial Drone Imagery
+  <span style="color: teal; font-family: Consolas;">Peeling Back the Pixels: Stabilizing Latent Diffusion for Data-Efficient Generation of Pineapple Fields
 </h1>
 
 <div align="center">
