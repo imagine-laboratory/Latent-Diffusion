@@ -72,19 +72,29 @@ def get_dataloaders(args):
 
     return trainset, valset, trainloader, valloader
 
-
-def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, seed, sigma_latent,latent_channels, log_to_wandb=True, num_image=None):
+def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, seed, sigma_latent,latent_channels, generator_type='ddpm', log_to_wandb=True, num_image=None):
     generator.manual_seed(seed)
-    sampler_i = DDPMSampler(generator)
-    sampler_i.set_inference_timesteps(1000)
     with torch.no_grad():
-        latents = torch.randn((1, latent_channels, h // 8, w // 8), device=device)
-        for timestep in tqdm(sampler_i.timesteps, desc="Sampling"):
-            t = torch.tensor([int(timestep)], dtype=torch.long, device=device)
-            time_embedding = get_time_embedding(t).to(device)
-            model_output = diffusion_model(latents, time_embedding)
-            latents = sampler_i.step(timestep, latents, model_output)
-        
+        if generator_type == 'flowmatching':
+            from models.flow_matching import FlowMatchingScheduler
+            fm_sampler = FlowMatchingScheduler(generator)
+            latents = fm_sampler.sample(
+                diffusion_model,
+                shape=(1, latent_channels, h // 8, w // 8),
+                device=device,
+                steps=50,
+                time_embed_fn=lambda t: get_time_embedding(t * 999).to(device),
+            )
+        else:
+            sampler_i = DDPMSampler(generator)
+            sampler_i.set_inference_timesteps(1000)
+            latents = torch.randn((1, latent_channels, h // 8, w // 8), device=device)
+            for timestep in tqdm(sampler_i.timesteps, desc="Sampling"):
+                t = torch.tensor([int(timestep)], dtype=torch.long, device=device)
+                time_embedding = get_time_embedding(t).to(device)
+                model_output = diffusion_model(latents, time_embedding)
+                latents = sampler_i.step(timestep, latents, model_output)
+
         latents = latents * sigma_latent
         # Decode & log
         # Decode & log
@@ -177,8 +187,13 @@ def main():
         from models.diffusion_conv import Diffusion
         diffusion_model = Diffusion(in_channels=latent_channels).to(device)
 
-    sampler = DDPMSampler(generator=torch.Generator(device=device),
-                          num_training_steps=1000)
+    generator_type = getattr(args, 'generator', 'ddpm')
+    if generator_type == 'flowmatching':
+        from models.flow_matching import FlowMatchingScheduler
+        sampler = FlowMatchingScheduler(generator=torch.Generator(device=device))
+    else:
+        sampler = DDPMSampler(generator=torch.Generator(device=device),
+                              num_training_steps=1000)
     optimizer = torch.optim.AdamW(diffusion_model.parameters(), lr=args.lr)
 
     total_steps = args.epochs * math.ceil(len(trainloader) / args.batch_size)
@@ -212,9 +227,10 @@ def main():
 
     # ───────────────────────────────────────────────────────────────────────────
     # 6) BEGIN/RESUME TRAINING LOOP
-    T = sampler.num_train_timesteps
-    if args.non_uniform_sampling:
-        weights = torch.ones(T, dtype=torch.float32, device=device) / T
+    if generator_type != 'flowmatching':
+        T = sampler.num_train_timesteps
+        if args.non_uniform_sampling:
+            weights = torch.ones(T, dtype=torch.float32, device=device) / T
 
     global_step = (start_epoch - 1) * len(trainloader)
     best_loss = float('inf')
@@ -258,31 +274,43 @@ def main():
                         latent = latent / sigma_latent
                         latent = latent.detach()
 
-                # 2. Sample t & add noise
-                if not args.non_uniform_sampling:
-                    t = torch.randint(0, T, (b,), device=device)
+                # 2. Sample t, add noise, and predict -- differs by generator type
+                if generator_type == 'flowmatching':
+                    noisy_lat, t, target_velocity = sampler.sample_training_pair(latent)
+                    t_emb = get_time_embedding(t * 999).to(device)
+                    pred_velocity = diffusion_model(noisy_lat, t_emb)
+
+                    per_gen = F.mse_loss(pred_velocity, target_velocity, reduction="none").mean(dim=[1, 2, 3])
+                    per_vis = torch.zeros_like(per_gen)  # no DDPM-style auxiliary visual loss for flow matching yet
+                    per_tot = per_gen
+
+                    loss_generation = per_gen.mean()
+                    loss_visual    = per_vis.mean()
+                    loss           = loss_generation
                 else:
-                    t = torch.multinomial(weights, num_samples=b, replacement=True).to(device)
+                    if not args.non_uniform_sampling:
+                        t = torch.randint(0, T, (b,), device=device)
+                    else:
+                        t = torch.multinomial(weights, num_samples=b, replacement=True).to(device)
 
-                noisy_lat, actual_noise, sqrt_alpha_prod, sqrt_one_minus_alpha_prod = sampler.add_noise(latent, t)
+                    noisy_lat, actual_noise, sqrt_alpha_prod, sqrt_one_minus_alpha_prod = sampler.add_noise(latent, t)
 
-                # 3. Time embed & predict
-                t_emb = get_time_embedding(t).to(device)
-                pred_noise = diffusion_model(noisy_lat, t_emb)
+                    t_emb = get_time_embedding(t).to(device)
+                    pred_noise = diffusion_model(noisy_lat, t_emb)
 
-                # reconstruct & compute per-sample losses
-                noisy_samples = sqrt_alpha_prod * latent + sqrt_one_minus_alpha_prod * pred_noise
-                actual_noise_pred = (noisy_samples - sqrt_alpha_prod * latent) / sqrt_one_minus_alpha_prod
+                    # reconstruct & compute per-sample losses
+                    noisy_samples = sqrt_alpha_prod * latent + sqrt_one_minus_alpha_prod * pred_noise
+                    actual_noise_pred = (noisy_samples - sqrt_alpha_prod * latent) / sqrt_one_minus_alpha_prod
 
-                # per-sample MSE
-                per_gen = F.mse_loss(pred_noise, actual_noise, reduction="none").mean(dim=[1,2,3])
-                per_vis = F.mse_loss(noisy_lat - actual_noise_pred, latent, reduction="none").mean(dim=[1,2,3])
-                per_tot = per_gen + args.rec_importance * per_vis
+                    # per-sample MSE
+                    per_gen = F.mse_loss(pred_noise, actual_noise, reduction="none").mean(dim=[1,2,3])
+                    per_vis = F.mse_loss(noisy_lat - actual_noise_pred, latent, reduction="none").mean(dim=[1,2,3])
+                    per_tot = per_gen + args.rec_importance * per_vis
 
-                # batch-level loss
-                loss_generation = per_gen.mean()
-                loss_visual    = per_vis.mean()
-                loss           = loss_generation  # or per_tot.mean()
+                    # batch-level loss
+                    loss_generation = per_gen.mean()
+                    loss_visual    = per_vis.mean()
+                    loss           = loss_generation  # or per_tot.mean()
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -354,7 +382,8 @@ def main():
                 diffusion_model.eval()
                 sample_i(h, w, vae, diffusion_model,
                          torch.Generator(device=device),
-                         epoch, global_step, device, seed=42, sigma_latent=sigma_latent,latent_channels=latent_channels)
+                         epoch, global_step, device, seed=42, sigma_latent=sigma_latent,latent_channels=latent_channels,
+                         generator_type=generator_type)
                 diffusion_model.train()
         else:
             epochs_no_improve += 1
@@ -376,7 +405,8 @@ def main():
         diffusion_model.eval()
         sample_i(h, w, vae, diffusion_model,
                  torch.Generator(device=device),
-                 epoch, global_step, device, seed=42, sigma_latent=sigma_latent, latent_channels=latent_channels)
+                 epoch, global_step, device, seed=42, sigma_latent=sigma_latent, latent_channels=latent_channels,
+                 generator_type=generator_type)
 
     print("Training complete.")
 
