@@ -18,9 +18,12 @@ def select_device(cfg_device: str = "cuda") -> str:
     if cfg_device == "cuda" and torch.cuda.is_available():
         device = "cuda"
         print(f"[Device] Using CUDA: {torch.cuda.get_device_name(0)}")
+    elif torch.backends.mps.is_available():
+        device = "mps"
+        print("[Device] CUDA not available, using Apple MPS (GPU).")
     else:
         device = "cpu"
-        print("[Device] CUDA not available, falling back to CPU.")
+        print("[Device] CUDA/MPS not available, falling back to CPU.")
     return device
 
 
