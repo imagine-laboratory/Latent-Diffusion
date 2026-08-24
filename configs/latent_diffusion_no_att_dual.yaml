@@ -8,7 +8,7 @@ epochs: 150
 rec_importance: 1
 seed: 42
 
-chkps_logging_path: "checkpoints/diffusion/dual_vae_Codebok_64@Commit_0.25@NumEmb_128/" #### This is for DUALVAE
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/dual_vae_Codebok_64@Commit_0.25@NumEmb_128/" #### This is for DUALVAE
 vae_chkp: "submodules/VAE/checkpoints/DUALVAE/Codebok_64@Commit_0.25@NumEmb_128/weights_ck_100.pt"
 
 # Early Stopping

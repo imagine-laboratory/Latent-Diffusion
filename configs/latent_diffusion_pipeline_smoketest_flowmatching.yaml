@@ -9,8 +9,8 @@ epochs: 2
 rec_importance: 1
 seed: 42
 
-chkps_logging_path: "checkpoints/diffusion/smoketest_flowmatching/"
-vae_chkp: "checkpoints/vae_fake/random_init.pt"
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/smoketest_flowmatching/"
+vae_chkp: "/work/oortega/checkpoints/vae_fake/random_init.pt"
 
 patience: -1
 es_min_delta: 0.1
