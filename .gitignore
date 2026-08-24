@@ -49,3 +49,4 @@ inferences/
 copy_images.py
 compute_metrics.py
 *.slurm
+*.out
