@@ -2,6 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import glob
 import cv2
+import h5py
 import numpy as np
 import os
 import random
@@ -136,4 +137,72 @@ class PineappleDataset(Dataset):
                 - 'idx': the index of the image
         """
         image = self.transform_image(self.images[idx])
+        return {'image': image, 'idx': idx}
+
+
+class PineappleH5Dataset(Dataset):
+    """
+    Loads RGB frames from the pre-built `pineapple_960x544.h5` file.
+
+    Splits are read directly from the file's own `split` dataset and are never
+    recomputed here: the frames are contiguous drone video, so a random split
+    would leak near-duplicate frames between train/val/test (see
+    pineapple_dataset_README.md). Rows marked 'drop' belong to no split and are
+    excluded automatically since they never match any requested split.
+
+    Only RGB is used (depth/boxes are ignored -- not needed for unconditional
+    image generation).
+    """
+
+    def __init__(self, h5_path, split='train', crop_size=256, augment=False, seed=42):
+        assert split in ['train', 'val', 'test'], "split must be 'train', 'val', or 'test'"
+
+        self.h5_path = h5_path
+        self.split = split
+        self.crop_size = crop_size
+        self.augment = augment and (split == 'train')  # only augment training data
+        self.seed = seed
+        self._h5 = None  # opened lazily: h5py.File handles don't survive DataLoader worker forking
+
+        with h5py.File(h5_path, 'r') as f:
+            split_col = np.char.decode(f['split'][:])
+            self.indices = np.where(split_col == split)[0]
+
+    def _file(self):
+        if self._h5 is None:
+            self._h5 = h5py.File(self.h5_path, 'r')
+        return self._h5
+
+    def __len__(self):
+        return len(self.indices)
+
+    def _random_crop(self, image):
+        h, w, _ = image.shape
+        c = self.crop_size
+        top = random.randint(0, h - c)
+        left = random.randint(0, w - c)
+        return image[top:top + c, left:left + c]
+
+    def _dihedral(self, image):
+        # flips x 90-degree rotations: nadir aerial imagery has no canonical "up",
+        # so all 8 transforms are label-preserving (per pineapple_dataset_README.md)
+        image = np.rot90(image, k=random.randint(0, 3))
+        if random.random() < 0.5:
+            image = np.fliplr(image)
+        return image
+
+    def transform_image(self, real_idx):
+        image = self._file()["rgb"][real_idx]  # (544, 960, 3) uint8, RGB
+
+        image = self._random_crop(image)
+        if self.augment:
+            image = self._dihedral(image)
+
+        image = image.astype(np.float32) / 255.0
+        image = np.ascontiguousarray(np.transpose(image, (2, 0, 1)))  # CHW
+        return image
+
+    def __getitem__(self, idx):
+        real_idx = int(self.indices[idx])
+        image = self.transform_image(real_idx)
         return {'image': image, 'idx': idx}
