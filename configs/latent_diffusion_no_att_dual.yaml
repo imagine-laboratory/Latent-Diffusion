@@ -1,5 +1,5 @@
 # Training Hyperparameters
-dataset_path: "../data_pineapple/FULL_UNIFIED"
+dataset_path: "/data/oortega/pineapple_960x544.h5"
 path_test_ids: "./test_ids.txt"
 batch_size: 8
 num_workers: 4

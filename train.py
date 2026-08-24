@@ -32,20 +32,23 @@ if path_to_add not in sys.path:
 
 def get_dataloaders(args):
     generator = torch.Generator().manual_seed(args.seed)
-    #trainset = PineappleDataset(train=True, val=False, train_ratio=args.train_ratio, path=args.dataset, seed=args.seed)
-    #valset = PineappleDataset(train=False, val=True, train_ratio=args.train_ratio, path=args.dataset, seed=args.seed)
-    trainset = PineappleDataset(
-        path=args.dataset_path,
-        split='train', test_txt=args.path_test_ids, augment=False, seed=args.seed
-    )
-    valset = PineappleDataset(
-        path=args.dataset_path,
-        split='val', test_txt=args.path_test_ids, augment=False, seed=args.seed
-    )
-    testset = PineappleDataset(
-        path=args.dataset_path,
-        split='test', test_txt=args.path_test_ids, augment=False, seed=args.seed
-    )
+
+    if args.dataset_path.endswith('.h5'):
+        # dataset_path points directly at the packed HDF5 file -- splits are
+        # precomputed inside it (see PineappleH5Dataset), no test_txt needed
+        from data.datasets import PineappleH5Dataset
+        crop_size = getattr(args, 'resize_img', 256)
+        trainset = PineappleH5Dataset(args.dataset_path, split='train', crop_size=crop_size, augment=False, seed=args.seed)
+        valset = PineappleH5Dataset(args.dataset_path, split='val', crop_size=crop_size, augment=False, seed=args.seed)
+    else:
+        trainset = PineappleDataset(
+            path=args.dataset_path,
+            split='train', test_txt=args.path_test_ids, augment=False, seed=args.seed
+        )
+        valset = PineappleDataset(
+            path=args.dataset_path,
+            split='val', test_txt=args.path_test_ids, augment=False, seed=args.seed
+        )
 
     trainloader = DataLoader(
         trainset,
@@ -68,6 +71,7 @@ def get_dataloaders(args):
     )
 
     return trainset, valset, trainloader, valloader
+
 
 def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, seed, sigma_latent,latent_channels, log_to_wandb=True, num_image=None):
     generator.manual_seed(seed)
