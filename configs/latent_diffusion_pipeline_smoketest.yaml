@@ -1,0 +1,26 @@
+# Pipeline smoke test -- validates train.py runs end to end on the real
+# dataset with an UNTRAINED (random) VAE checkpoint. Results are meaningless,
+# this only proves the wiring (dataloader -> VAE -> DDPM -> checkpoint) works.
+dataset_path: "/data/oortega/pineapple_960x544.h5"
+path_test_ids: "./test_ids.txt"
+batch_size: 4
+num_workers: 2
+lr: 0.0001
+epochs: 2
+rec_importance: 1
+seed: 42
+
+chkps_logging_path: "checkpoints/diffusion/smoketest_ddpm/"
+vae_chkp: "checkpoints/vae_fake/random_init.pt"
+
+patience: -1
+es_min_delta: 0.1
+
+do_wandb: False
+non_uniform_sampling: false
+attention: false
+augment: false
+constant_lr: false
+
+run_name: "Pipeline-Smoketest-DDPM"
+wandb_run_id: null

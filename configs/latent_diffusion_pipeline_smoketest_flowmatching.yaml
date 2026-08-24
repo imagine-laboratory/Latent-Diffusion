@@ -1,0 +1,26 @@
+# Same as latent_diffusion_pipeline_smoketest.yaml, but exercising the
+# Flow Matching path instead of DDPM.
+dataset_path: "/data/oortega/pineapple_960x544.h5"
+path_test_ids: "./test_ids.txt"
+batch_size: 4
+num_workers: 2
+lr: 0.0001
+epochs: 2
+rec_importance: 1
+seed: 42
+
+chkps_logging_path: "checkpoints/diffusion/smoketest_flowmatching/"
+vae_chkp: "checkpoints/vae_fake/random_init.pt"
+
+patience: -1
+es_min_delta: 0.1
+
+do_wandb: False
+non_uniform_sampling: false
+attention: false
+augment: false
+constant_lr: false
+generator: "flowmatching"
+
+run_name: "Pipeline-Smoketest-FlowMatching"
+wandb_run_id: null
