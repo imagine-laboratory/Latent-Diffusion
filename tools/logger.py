@@ -26,7 +26,6 @@ def setup_wandb(lr, epochs, batch_size, run_name, run_id=None):
     wandb.login(key=api_key)
 
     init_args = {
-        "entity": "imagine-laboratory-conare",
         "project": "SD_training_exp1",
         "name": run_name,
         "config": {
