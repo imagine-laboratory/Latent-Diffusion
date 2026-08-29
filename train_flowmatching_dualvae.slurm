@@ -7,4 +7,4 @@
 
 ENV=/work/oortega/conda_envs/ddpm_training
 
-$ENV/bin/python train.py --config configs/latent_diffusion_flowmatching_dualvae.yaml
+$ENV/bin/python train.py --config configs/latent_diffusion_flowmatching_dualvae.yaml --model_VAE dualvae --config_VAE configs/dualvae.yaml

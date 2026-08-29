@@ -7,4 +7,4 @@
 
 ENV=/work/oortega/conda_envs/ddpm_training
 
-$ENV/bin/python train.py --config configs/latent_diffusion_ddpm_vanilla.yaml
+$ENV/bin/python train.py --config configs/latent_diffusion_ddpm_vanilla.yaml --model_VAE vae --config_VAE configs/vae.yaml
