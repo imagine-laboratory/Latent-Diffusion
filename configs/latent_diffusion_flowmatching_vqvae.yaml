@@ -1,0 +1,31 @@
+# Training Hyperparameters
+dataset_path: "/data/oortega/pineapple_960x544.h5"
+path_test_ids: "./test_ids.txt"  # unused when dataset_path is a .h5 file (splits are precomputed inside it)
+batch_size: 8
+num_workers: 4
+lr: 0.0001
+epochs: 800
+rec_importance: 1
+seed: 42
+
+# Model Paths & Checkpoints
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/flowmatching_vqvae/" #### This is for VQVAE + Flow Matching
+vae_chkp: "/work/oortega/checkpoints/vqvae/Codebok_64@Fold_test_ids@Commit_0.25@NumEmb_128/weights_ck_117.pt"
+
+# Early Stopping
+patience: -1
+es_min_delta: 0.1
+
+# Flags (Store True)
+do_wandb: True
+non_uniform_sampling: false   # unused by Flow Matching (continuous t, no discrete timesteps)
+attention: false
+augment: false
+constant_lr: false
+
+# Generator: "ddpm" (default, used by all other configs) or "flowmatching"
+generator: "flowmatching"
+
+# Logging & Tracking
+run_name: "VQVAE-FlowMatching-v1"
+wandb_run_id: null

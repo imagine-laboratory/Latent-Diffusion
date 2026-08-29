@@ -4,12 +4,13 @@ path_test_ids: "./test_ids.txt"
 batch_size: 8
 num_workers: 4
 lr: 0.0001
-epochs: 150
+epochs: 800
 rec_importance: 1
 seed: 42
 
-chkps_logging_path: "/work/oortega/checkpoints/diffusion/dual_vae_Codebok_64@Commit_0.25@NumEmb_128/" #### This is for DUALVAE
-vae_chkp: "submodules/VAE/checkpoints/DUALVAE/Codebok_64@Commit_0.25@NumEmb_128/weights_ck_100.pt"
+# Model Paths & Checkpoints
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/betaKL@0.001/" #### This is for Vanilla VAE
+vae_chkp: "/work/oortega/checkpoints/vae/betaKL@0.001/best.pt"
 
 # Early Stopping
 patience: -1
@@ -23,5 +24,5 @@ augment: false
 constant_lr: false
 
 # Logging & Tracking
-run_name: "Dual-VAE-DIFF-NOAT-long"
+run_name: "Vanilla-VAE-DIFF-NOAT-long_v3"
 wandb_run_id: null

@@ -1,0 +1,34 @@
+# Training Hyperparameters
+dataset_path: "/data/oortega/pineapple_960x544.h5"
+path_test_ids: "./test_ids.txt"  # unused when dataset_path is a .h5 file (splits are precomputed inside it)
+batch_size: 8
+num_workers: 4
+lr: 0.0001
+epochs: 800
+rec_importance: 1
+seed: 42
+
+# Model Paths & Checkpoints
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/flowmatching_dualvae/" #### This is for DualVAE + Flow Matching
+# PENDIENTE: job 607698 (DualVAE) todavia esta entrenando. Actualizar este path
+# cuando termine, con el mejor checkpoint real de:
+# /work/oortega/checkpoints/dualvae/Codebok_64@Commit_0.25@NumEmb_128/
+vae_chkp: "PENDIENTE_actualizar_cuando_termine_607698"
+
+# Early Stopping
+patience: -1
+es_min_delta: 0.1
+
+# Flags (Store True)
+do_wandb: True
+non_uniform_sampling: false   # unused by Flow Matching (continuous t, no discrete timesteps)
+attention: false
+augment: false
+constant_lr: false
+
+# Generator: "ddpm" (default, used by all other configs) or "flowmatching"
+generator: "flowmatching"
+
+# Logging & Tracking
+run_name: "DualVAE-FlowMatching-v1"
+wandb_run_id: null

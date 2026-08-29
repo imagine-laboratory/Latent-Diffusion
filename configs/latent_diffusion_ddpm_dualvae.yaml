@@ -9,8 +9,11 @@ rec_importance: 1
 seed: 42
 
 # Model Paths & Checkpoints
-chkps_logging_path: "/work/oortega/checkpoints/diffusion/betaKL@0.001/" #### This is for Vanilla VAE
-vae_chkp: "/work/oortega/checkpoints/vae/betaKL@0.001/best.pt"
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/dualvae/" #### This is for DualVAE
+# PENDIENTE: job 607698 (DualVAE) todavia esta entrenando. Actualizar este path
+# cuando termine, con el mejor checkpoint real de:
+# /work/oortega/checkpoints/dualvae/Codebok_64@Commit_0.25@NumEmb_128/
+vae_chkp: "PENDIENTE_actualizar_cuando_termine_607698"
 
 # Early Stopping
 patience: -1
@@ -24,5 +27,5 @@ augment: false
 constant_lr: false
 
 # Logging & Tracking
-run_name: "Vanilla-VAE-DIFF-NOAT-long_v3"
+run_name: "DualVAE-DDPM-v1"
 wandb_run_id: null

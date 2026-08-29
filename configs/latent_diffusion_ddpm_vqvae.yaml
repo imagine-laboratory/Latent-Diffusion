@@ -9,8 +9,8 @@ rec_importance: 1
 seed: 42
 
 # Model Paths & Checkpoints
-chkps_logging_path: "/work/oortega/checkpoints/diffusion/Codebok_64@Fold_test_ids@Commit_0.25@NumEmb_128/" #### This is for VQVAE
-vae_chkp: "submodules/VAE/checkpoints/VQVAE/Codebok_64@Fold_test_ids@Commit_0.25@NumEmb_128/weights_ck_100.pt"
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/vqvae/" #### This is for VQVAE
+vae_chkp: "/work/oortega/checkpoints/vqvae/Codebok_64@Fold_test_ids@Commit_0.25@NumEmb_128/weights_ck_117.pt"
 
 # Early Stopping
 patience: -1
@@ -24,5 +24,5 @@ augment: false
 constant_lr: True
 
 # Logging & Tracking
-run_name: "VQ-VAE-DIFF-NOAT-long_v2"
+run_name: "VQVAE-DDPM-v1"
 wandb_run_id: null

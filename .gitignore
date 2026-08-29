@@ -48,5 +48,4 @@ inferences/
 *test_ids.txt
 copy_images.py
 compute_metrics.py
-*.slurm
 *.out
