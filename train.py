@@ -234,6 +234,7 @@ def main():
 
     global_step = (start_epoch - 1) * len(trainloader)
     best_loss = float('inf')
+    best_ckpt_path = None
     epochs_no_improve = 0
     es_min_delta = args.es_min_delta
 
@@ -377,6 +378,9 @@ def main():
             )
             torch.save(diffusion_model.state_dict(), ckpt_path)
             print(f"  ↳ New best model saved to {ckpt_path}")
+            if best_ckpt_path is not None and os.path.exists(best_ckpt_path):
+                os.remove(best_ckpt_path)
+            best_ckpt_path = ckpt_path
             if args.do_wandb:
                 print("Logging sample image...")
                 diffusion_model.eval()
