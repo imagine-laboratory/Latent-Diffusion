@@ -10,10 +10,7 @@ seed: 42
 
 # Model Paths & Checkpoints
 chkps_logging_path: "/work/oortega/checkpoints/diffusion/dualvae/" #### This is for DualVAE
-# PENDIENTE: job 607698 (DualVAE) todavia esta entrenando. Actualizar este path
-# cuando termine, con el mejor checkpoint real de:
-# /work/oortega/checkpoints/dualvae/Codebok_64@Commit_0.25@NumEmb_128/
-vae_chkp: "PENDIENTE_actualizar_cuando_termine_607698"
+vae_chkp: "/work/oortega/checkpoints/dualvae/Codebok_64@Commit_0.25@NumEmb_128/weights_ck_248.pt"
 
 # Early Stopping
 patience: -1
