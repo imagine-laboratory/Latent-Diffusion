@@ -65,6 +65,7 @@ def parse_args_inference():
     parser.add_argument('--save_path', default="inference_results", type=str)
     parser.add_argument('--diffusion_chkp', default="checkpoints/diffusion/betaKL@0.001/diffusion_final_epoch800_loss0.0788_1.pt", type=str)
     parser.add_argument('--sigma_latent', type=str)
+    parser.add_argument('--generator', default='ddpm', type=str)  # 'ddpm' or 'flowmatching'
     #boolean for attention default false
     parser.add_argument('--attention', action='store_true')
     parser.add_argument('--steps', default=1000, type=int)

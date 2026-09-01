@@ -9,6 +9,7 @@ import sys
 # sys.path.append(os.getcwd())
 
 from models.ddpm import DDPMSampler
+from models.flow_matching import FlowMatchingScheduler
 from tools.utils import get_time_embedding, select_device, load_and_send_to_eval
 from tools.arguments import parse_args_inference
 
@@ -85,31 +86,44 @@ def main():
     # 5) Generation Logic
     generator = torch.Generator(device=device)
     generator.manual_seed(args.seed)
-    
-    sampler = DDPMSampler(generator)
-    # Use the custom inference steps requested
-    sampler.set_inference_timesteps(args.steps)
-    
+
+    generator_type = getattr(args, 'generator', 'ddpm')
+    if generator_type == 'flowmatching':
+        fm_sampler = FlowMatchingScheduler(generator)
+    else:
+        sampler = DDPMSampler(generator)
+        # Use the custom inference steps requested
+        sampler.set_inference_timesteps(args.steps)
+
     # Assuming standard 1/8 reduction from VAE
     # default to 256x256 images, so latent space is 32x32 if using 4 channels, adjust if your config differs
     h, w = 256, 256
-    
-    print(f"Starting generation of {args.num_images} images...")
-    
+
+    print(f"Starting generation of {args.num_images} images using {generator_type}...")
+
     # Outer progress bar for total images
     for i in tqdm(range(args.num_images), desc="Generating Dataset"):
         with torch.no_grad():
-            latents = torch.randn((1, latent_channels, h // 8, w // 8), device=device)
-            
-            # Inner progress bar for denoising steps
-            for timestep in tqdm(sampler.timesteps, desc=f"Image {i+1}", leave=False):
-                t = torch.tensor([int(timestep)], dtype=torch.long, device=device)
-                time_embedding = get_time_embedding(t).to(device)
-                model_output = diffusion_model(latents, time_embedding)
-                latents = sampler.step(timestep, latents, model_output)
-            
-            
-            
+            if generator_type == 'flowmatching':
+                latents = fm_sampler.sample(
+                    diffusion_model,
+                    shape=(1, latent_channels, h // 8, w // 8),
+                    device=device,
+                    steps=args.steps,
+                    time_embed_fn=lambda t: get_time_embedding(t * 999).to(device),
+                )
+            else:
+                latents = torch.randn((1, latent_channels, h // 8, w // 8), device=device)
+
+                # Inner progress bar for denoising steps
+                for timestep in tqdm(sampler.timesteps, desc=f"Image {i+1}", leave=False):
+                    t = torch.tensor([int(timestep)], dtype=torch.long, device=device)
+                    time_embedding = get_time_embedding(t).to(device)
+                    model_output = diffusion_model(latents, time_embedding)
+                    latents = sampler.step(timestep, latents, model_output)
+
+
+
             if no_need_sigma: # VQVAE
                 z_q, _, _, _, _ = vae.vq_layer(latents)
                 decoded = vae.decoder(z_q)
