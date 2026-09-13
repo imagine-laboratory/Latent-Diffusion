@@ -38,8 +38,9 @@ def get_dataloaders(args):
         # precomputed inside it (see PineappleH5Dataset), no test_txt needed
         from data.datasets import PineappleH5Dataset
         crop_size = getattr(args, 'resize_img', 256)
-        trainset = PineappleH5Dataset(args.dataset_path, split='train', crop_size=crop_size, augment=False, seed=args.seed)
-        valset = PineappleH5Dataset(args.dataset_path, split='val', crop_size=crop_size, augment=False, seed=args.seed)
+        in_channels = getattr(args.vae_config, 'in_channels', 3)
+        trainset = PineappleH5Dataset(args.dataset_path, split='train', crop_size=crop_size, augment=False, seed=args.seed, in_channels=in_channels)
+        valset = PineappleH5Dataset(args.dataset_path, split='val', crop_size=crop_size, augment=False, seed=args.seed, in_channels=in_channels)
     else:
         trainset = PineappleDataset(
             path=args.dataset_path,
@@ -109,12 +110,24 @@ def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, 
         img = np.clip(img, 0.0, 1.0)
         img = (img * 255).astype(np.uint8)
 
+        # RGB and Depth are different modalities -- keep them as separate images
+        # instead of letting a 4th channel get silently read as alpha/transparency
+        # on top of RGB (same reasoning as generate_test_inferences.py in the VAE repo).
+        has_depth = img.shape[2] == 4
+        img_rgb = img[:, :, :3]
+        img_depth = img[:, :, 3] if has_depth else None
+
         if log_to_wandb:
-            image = wandb.Image(img, caption=f"sample_epoch_{epoch}")
-            wandb.log({"examples": image})
+            log_dict = {"examples": wandb.Image(img_rgb, caption=f"sample_epoch_{epoch}")}
+            if has_depth:
+                log_dict["examples_depth"] = wandb.Image(img_depth, caption=f"sample_epoch_{epoch}_depth")
+            wandb.log(log_dict)
         else:
-            tensor = torch.from_numpy(img).permute(2,0,1).float().div(255.0)
+            tensor = torch.from_numpy(img_rgb).permute(2, 0, 1).float().div(255.0)
             torchvision.utils.save_image(tensor, f"outputSCALED_{seed}_{num_image}.png")
+            if has_depth:
+                tensor_depth = torch.from_numpy(img_depth).float().div(255.0).unsqueeze(0)
+                torchvision.utils.save_image(tensor_depth, f"outputSCALED_{seed}_{num_image}_depth.png")
   
 def main():
     args = parse_args()
@@ -128,7 +141,10 @@ def main():
     no_need_sigma = False
     if args.model_VAE.lower() == "vae":
         from submodules.VAE.models.vae import VAE
-        vae = VAE().to(device)
+        vae = VAE(
+            in_channels=getattr(args.vae_config, 'in_channels', 3),
+            out_channels=getattr(args.vae_config, 'out_channels', 3),
+        ).to(device)
     elif args.model_VAE.lower() == "dualvae":
         from submodules.VAE.models.dual_vae import DUALVAE
         vae = DUALVAE(commitment_cost=args.vae_config.commitment_cost,

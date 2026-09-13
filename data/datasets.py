@@ -150,18 +150,22 @@ class PineappleH5Dataset(Dataset):
     pineapple_dataset_README.md). Rows marked 'drop' belong to no split and are
     excluded automatically since they never match any requested split.
 
-    Only RGB is used (depth/boxes are ignored -- not needed for unconditional
-    image generation).
+    With in_channels=3 (default), only RGB is used (depth/boxes are ignored).
+    With in_channels=4, the file's monocular `depth` map is concatenated as a
+    4th channel -- needed when the frozen VAE encoder for this generator run
+    was itself trained on RGB+Depth (see the VAE submodule's PineappleH5Dataset).
     """
 
-    def __init__(self, h5_path, split='train', crop_size=256, augment=False, seed=42):
+    def __init__(self, h5_path, split='train', crop_size=256, augment=False, seed=42, in_channels=3):
         assert split in ['train', 'val', 'test'], "split must be 'train', 'val', or 'test'"
+        assert in_channels in (3, 4), "in_channels must be 3 (RGB) or 4 (RGB+Depth)"
 
         self.h5_path = h5_path
         self.split = split
         self.crop_size = crop_size
         self.augment = augment and (split == 'train')  # only augment training data
         self.seed = seed
+        self.in_channels = in_channels
         self._h5 = None  # opened lazily: h5py.File handles don't survive DataLoader worker forking
 
         with h5py.File(h5_path, 'r') as f:
@@ -176,12 +180,11 @@ class PineappleH5Dataset(Dataset):
     def __len__(self):
         return len(self.indices)
 
-    def _random_crop(self, image):
-        h, w, _ = image.shape
+    def _crop_box(self, h, w):
         c = self.crop_size
         top = random.randint(0, h - c)
         left = random.randint(0, w - c)
-        return image[top:top + c, left:left + c]
+        return top, left
 
     def _dihedral(self, image):
         # flips x 90-degree rotations: nadir aerial imagery has no canonical "up",
@@ -192,9 +195,18 @@ class PineappleH5Dataset(Dataset):
         return image
 
     def transform_image(self, real_idx):
-        image = self._file()["rgb"][real_idx]  # (544, 960, 3) uint8, RGB
+        rgb = self._file()["rgb"][real_idx]  # (544, 960, 3) uint8, RGB
+        c = self.crop_size
+        top, left = self._crop_box(*rgb.shape[:2])
+        rgb = rgb[top:top + c, left:left + c]
 
-        image = self._random_crop(image)
+        if self.in_channels == 4:
+            depth = self._file()["depth"][real_idx]  # (544, 960) uint8, per-image normalised
+            depth = depth[top:top + c, left:left + c]  # same crop box as rgb
+            image = np.concatenate([rgb, depth[:, :, None]], axis=2)  # (crop, crop, 4)
+        else:
+            image = rgb
+
         if self.augment:
             image = self._dihedral(image)
 

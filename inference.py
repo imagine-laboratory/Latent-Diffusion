@@ -33,7 +33,10 @@ def main():
     
     if args.model_VAE.lower() == "vae":
         from submodules.VAE.models.vae import VAE
-        vae = VAE().to(device)
+        vae = VAE(
+            in_channels=getattr(args.vae_config, 'in_channels', 3),
+            out_channels=getattr(args.vae_config, 'out_channels', 3),
+        ).to(device)
     elif args.model_VAE.lower() == "dualvae":
         from submodules.VAE.models.dual_vae import DUALVAE
         vae = DUALVAE(
@@ -132,10 +135,16 @@ def main():
                 latents = latents * sigma_latent
                 decoded = vae.decoder(latents)
             
-            # Save to disk
+            # Save to disk. RGB and Depth are different modalities -- save them as
+            # separate images instead of letting a 4th channel get silently read
+            # as alpha/transparency on top of RGB.
             img_tensor = decoded.squeeze(0).clamp(0.0, 1.0)
+            has_depth = img_tensor.shape[0] == 4
             save_name = os.path.join(args.save_path, f"synth_{i:05d}.png")
-            torchvision.utils.save_image(img_tensor, save_name)
+            torchvision.utils.save_image(img_tensor[:3], save_name)
+            if has_depth:
+                depth_name = os.path.join(args.save_path, f"synth_{i:05d}_depth.png")
+                torchvision.utils.save_image(img_tensor[3:4], depth_name)
 
     print(f"Generation complete. Saved to {args.save_path}")
 
