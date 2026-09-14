@@ -315,13 +315,17 @@ def main():
                     t_emb = get_time_embedding(t).to(device)
                     pred_noise = diffusion_model(noisy_lat, t_emb)
 
-                    # reconstruct & compute per-sample losses
-                    noisy_samples = sqrt_alpha_prod * latent + sqrt_one_minus_alpha_prod * pred_noise
-                    actual_noise_pred = (noisy_samples - sqrt_alpha_prod * latent) / sqrt_one_minus_alpha_prod
+                    # Reconstruct the implied original latent from the predicted noise, using
+                    # the actual noisy sample the model saw (not a re-derivation from the real
+                    # latent -- that previous version algebraically canceled back to pred_noise
+                    # itself, so per_vis was never zero even for a perfect prediction).
+                    # noisy_lat = sqrt_alpha_prod*latent + sqrt_one_minus_alpha_prod*actual_noise
+                    # => predicted_latent = (noisy_lat - sqrt_one_minus_alpha_prod*pred_noise) / sqrt_alpha_prod
+                    predicted_latent = (noisy_lat - sqrt_one_minus_alpha_prod * pred_noise) / sqrt_alpha_prod
 
                     # per-sample MSE
                     per_gen = F.mse_loss(pred_noise, actual_noise, reduction="none").mean(dim=[1,2,3])
-                    per_vis = F.mse_loss(noisy_lat - actual_noise_pred, latent, reduction="none").mean(dim=[1,2,3])
+                    per_vis = F.mse_loss(predicted_latent, latent, reduction="none").mean(dim=[1,2,3])
                     per_tot = per_gen + args.rec_importance * per_vis
 
                     # batch-level loss
