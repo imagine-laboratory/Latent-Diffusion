@@ -1,0 +1,28 @@
+# Training Hyperparameters
+dataset_path: "/data/oortega/pineapple_960x544.h5"
+path_test_ids: "./test_ids.txt"  # unused when dataset_path is a .h5 file (splits are precomputed inside it)
+batch_size: 8
+num_workers: 4
+lr: 0.0001
+epochs: 800
+rec_importance: 1
+seed: 42
+
+# Model Paths & Checkpoints
+chkps_logging_path: "/work/oortega/checkpoints/diffusion/ddpm_vae_rgbd/" #### This is for Vanilla VAE, RGB+D -> RGB+D
+vae_chkp: "/work/oortega/checkpoints/vae_rgbd/betaKL@0.001/best.pt"
+
+# Early Stopping
+patience: -1
+es_min_delta: 0.1
+
+# Flags (Store True)
+do_wandb: True
+non_uniform_sampling: false
+attention: false
+augment: false
+constant_lr: false
+
+# Logging & Tracking
+run_name: "Vanilla-RGBD-DDPM-v1"
+wandb_run_id: null

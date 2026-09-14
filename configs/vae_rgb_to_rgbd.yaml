@@ -1,0 +1,5 @@
+# Used only via --config_VAE to populate args.vae_config with the frozen VAE's
+# architecture parameters (train.py / inference.py read in_channels/out_channels
+# from here to build the matching VAE before loading vae_chkp).
+in_channels: 3    # encoder sees RGB only
+out_channels: 4   # decoder reconstructs RGB + depth (predicted purely from the RGB-derived latent)
