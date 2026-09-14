@@ -182,8 +182,14 @@ class PineappleH5Dataset(Dataset):
 
     def _crop_box(self, h, w):
         c = self.crop_size
-        top = random.randint(0, h - c)
-        left = random.randint(0, w - c)
+        if self.split == 'train':
+            top = random.randint(0, h - c)
+            left = random.randint(0, w - c)
+        else:
+            # val/test must see the same crop every run to be reproducible/comparable
+            # (e.g. a fixed FID reference set, or metrics you can compare across runs)
+            top = (h - c) // 2
+            left = (w - c) // 2
         return top, left
 
     def _dihedral(self, image):
