@@ -3,7 +3,7 @@
 #SBATCH --output=uncertainty_vs_error_%j.out
 #SBATCH --partition=nukwa-debug
 #SBATCH --ntasks=1
-#SBATCH --time=00:10:00
+#SBATCH --time=01:00:00
 
 ENV=/work/oortega/conda_envs/ddpm_training
 
