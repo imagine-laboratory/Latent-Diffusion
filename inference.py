@@ -133,7 +133,9 @@ def main():
             else:
                 # Rescale and Decode
                 latents = latents * sigma_latent
-                decoded, _, _ = vae.decoder(latents)  # VAE_Decoder now returns (z, mean, logvar)
+                decoded = vae.decoder(latents)
+                if type(vae).__name__ == "VAE":
+                    decoded = decoded[0]  # VAE_Decoder returns (z, mean, logvar); the other decoders return a tensor
             
             # Save to disk. RGB and Depth are different modalities -- save them as
             # separate images instead of letting a 4th channel get silently read

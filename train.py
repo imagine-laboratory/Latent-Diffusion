@@ -105,6 +105,8 @@ def sample_i(h, w, vae, diffusion_model, generator, epoch, global_step, device, 
             decoded = vae.decoder(z_q)
         else:
             decoded = vae.decoder(latents)
+            if type(vae).__name__ == "VAE":
+                decoded = decoded[0]  # VAE_Decoder returns (z, mean, logvar); the other decoders return a tensor
         img = decoded.squeeze(0).cpu().numpy()
         img = np.transpose(img, (1, 2, 0))
         img = np.clip(img, 0.0, 1.0)
