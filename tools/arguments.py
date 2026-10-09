@@ -68,6 +68,8 @@ def parse_args_inference():
     parser.add_argument('--generator', default='ddpm', type=str)  # 'ddpm' or 'flowmatching'
     #boolean for attention default false
     parser.add_argument('--attention', action='store_true')
+    parser.add_argument('--decoder_mean', action='store_true',
+                        help="decode with the VariationalLastLayer's mean instead of its sampled z (no pixel noise)")
     parser.add_argument('--steps', default=1000, type=int)
     parser.add_argument('--num_images', default=1000, type=int)
     parser.add_argument('--seed', default=42, type=int)

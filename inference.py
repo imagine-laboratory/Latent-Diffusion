@@ -135,7 +135,9 @@ def main():
                 latents = latents * sigma_latent
                 decoded = vae.decoder(latents)
                 if type(vae).__name__ == "VAE":
-                    decoded = decoded[0]  # VAE_Decoder returns (z, mean, logvar); the other decoders return a tensor
+                    # VAE_Decoder returns (z, mean, logvar); z has pixel noise sampled by the variational layer,
+                    # mean is the deterministic prediction. The other decoders return a plain tensor.
+                    decoded = decoded[1] if args.decoder_mean else decoded[0]
             
             # Save to disk. RGB and Depth are different modalities -- save them as
             # separate images instead of letting a 4th channel get silently read
